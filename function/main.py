@@ -57,9 +57,9 @@ def job_config():
         create_disposition="CREATE_IF_NEEDED",
         write_disposition="WRITE_APPEND",
         source_format="NEWLINE_DELIMITED_JSON",
-        clustering_fields=clustering(),
+        #clustering_fields=clustering(),
         schema=schema(),
-        time_partitioning=partitioning(),
+        #time_partitioning=partitioning(),
         ignore_unknown_values=True
     )
 
