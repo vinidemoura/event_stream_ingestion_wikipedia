@@ -26,63 +26,51 @@
 ## Task5 - Query
 
     Here are some queries that can be used to explore the data stored on Big Query:
+        - bq --location=US query --use_legacy_sql=false 'SELECT wiki, count(*) as qty_changes FROM `micro-avenue-230617.wikipedia_event.change_events*` GROUP BY wiki ORDER BY qty_changes DESC'
 
+        - bq --location=US query --use_legacy_sql=false 'SELECT meta.domain, count(*) as qty_changes FROM `micro-avenue-230617.wikipedia_event.change_events*` GROUP BY meta.domain ORDER BY qty_changes DESC'
+        
 
 
 ## Setup
 
 
 1. Open CLoud Shell
-2. 
-3. 
+2. run "git clone https://github.com/vinidemoura/event_stream_ingestion_wikipedia.git" to clone the git repository
+3. run "source event_stream_ingestion_wikipedia/setup/local.env" to export environment variables.
+4. run "sudo pip3 install -r event_stream_ingestion_wikipedia/stream/requirements.txt" to install libraries requerired for producer that will send data to Pub/Sub. 
+5. run "cd event_stream_ingestion_wikipedia && python3 stream/gcp_stream.py" to run the producer that will send data to Pub/Sub
 
-Run `source local.env` to export environment variables.
+Run Dataflow Job
 
-![alt text](./images/diagram.jpg "Diagram Architecture")
+1. On CLoud Console, click on DataFLow icon
+2. Click on "CREATE JOB FROM TEMPLATE" button
+3. Fill the fields with the follow values:
+    - Job name: "wiki-event-dataflow"
+    - Cloud Dataflow template: Cloud Pub/Sub to Cloud Storage text
+    - Input Cloud Pub/Sub topic : "projects/micro-avenue-230617/topics/event_stream_wikipedia"
+    - Output Cloud Storage directory: "gs://wikipedia_events/"
+    - Output file prefix: "output-"
+    - Temporary Location: "gs://wikipedia_events/tmp"
+    - Output file suffix: "json"
+    - Max workers: 1
 
 Deploy function on Google Cloud Shell
 
+1. on cloud shell, open a new tab
+2. run "cd event_stream_ingestion_wikipedia/function && zip setup main.py requirements.txt"
+3. run "gsutil cp setup.zip gs://cloud-function-setup/"
+4. Run this command:
 ```
-    gcloud functions deploy my-function-name \
+    gcloud functions deploy strorage_to_bq \
     --region us-east1 \
     --runtime python37 \
     --entry-point gcs2bigquery \
-    --trigger-resource bucket_name \
+    --trigger-resource wikipedia_events \
     --trigger-event google.storage.object.finalize \
-    --source gs://setup/function.zip \
-    --set-env-vars PROJECT_ID=micro-avenue-230617,DATASET_ID=dataset_id,TABLE_ID=table_id
+    --source gs://cloud-function-setup/setup.zip \
+    --set-env-vars PROJECT_ID=micro-avenue-230617,DATASET_ID=wikipedia_event,TABLE_ID=change_events
 ```
-
-# Functions
-
-Crie um arquivo compactado no formato `.zip`, e então faça upload do arquivo recém criado para um `bucket` no projeto.
-
-```
-    zip setup/function gcs2bigquery.py requirements.txt .gcloudignore
-```
-
-Na pasta `setup`, crie uma arquivo para definição das variáveis de ambiente do seu projeto `project.env`, em seguida execute: `source setup/project.env`.
-
-```
-    export PROJECT_ID=my-project-id
-    export DATASET_ID=my-dataset-id
-    export TABLE_ID=my-table-id
-    export LOGGER_ID=my-logger-id
-
-    export FUNCTION=my-function-name
-    export REGION=us-east1
-    export ENTRY_POINT=gcs2bigquery
-    export RESOURCE=bucket-name
-    export SOURCE=gs://functions/my-function.zip
-```
-
-Enfim, faça deploy da function, executando o seguinte comando: `sh setup/deploy.sh`.
-
-
-## References
-
-- https://medium.com/google-cloud/import-json-into-bigquery-with-google-cloud-functions-31facea134bf
-- https://medium.com/@asajharland/effective-data-loading-with-bigquery-batch-loading-flat-files-bf2fd0ebb325
 
 ## API References
 - https://googleapis.github.io/google-cloud-python/latest/bigquery/index.html
@@ -90,5 +78,8 @@ Enfim, faça deploy da function, executando o seguinte comando: `sh setup/deploy
 - https://github.com/GoogleCloudPlatform/python-docs-samples/blob/master/functions/gcs
 - https://cloud.google.com/sdk/gcloud/reference/beta/functions/deploy
 
-https://cloud.google.com/dataflow/docs/templates/executing-templates#modelos-fornecidos-pelo-google
+- https://cloud.google.com/dataflow/docs/templates/executing-templates#modelos-fornecidos-pelo-google
+
+
+
 
